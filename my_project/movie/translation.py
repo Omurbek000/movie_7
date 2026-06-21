@@ -1,5 +1,6 @@
-from modeltranslation.translator import TranslationOptions,register
+from modeltranslation.translator import TranslationOptions, register
 from .models import Director, Actor, Genre, Movie, Country
+
 
 @register(Director)
 class DirectorTranslationOptions(TranslationOptions):
@@ -7,20 +8,20 @@ class DirectorTranslationOptions(TranslationOptions):
 
 
 @register(Actor)
-class DirectorTranslationOptions(TranslationOptions):
+class ActorTranslationOptions(TranslationOptions):
     fields = ('actor_name', 'actor_bio')
 
 
 @register(Genre)
-class DirectorTranslationOptions(TranslationOptions):
+class GenreTranslationOptions(TranslationOptions):
     fields = ('genre_name',)
 
 
 @register(Country)
-class DirectorTranslationOptions(TranslationOptions):
+class CountryTranslationOptions(TranslationOptions):
     fields = ('country_name',)
 
 
 @register(Movie)
-class DirectorTranslationOptions(TranslationOptions):
+class MovieTranslationOptions(TranslationOptions):
     fields = ('movie_name', 'descriptions')

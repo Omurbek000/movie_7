@@ -3,12 +3,15 @@ from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import MinValueValidator, MaxValueValidator
 
+# Статусы пользователей и контента
 STATUS_CHOICES = (
     ('pro', 'pro'),
     ('simple', 'simple')
 )
 
+
 class Profile(AbstractUser):
+    """Расширение стандартного пользователя: телефон, возраст, аватар, статус"""
     phone_number = PhoneNumberField(null=True, blank=True)
     age = models.PositiveSmallIntegerField(validators=[MinValueValidator(12), MaxValueValidator(75)],
                                            null=True, blank=True)
@@ -17,10 +20,11 @@ class Profile(AbstractUser):
     data_registered = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'{self.first_name} - {self.last_name}'
+        return f'{self.first_name} {self.last_name}'
 
 
 class Country(models.Model):
+    """Страна-продюсер фильма"""
     country_name = models.CharField(max_length=64, unique=True)
 
     def __str__(self):
@@ -28,6 +32,7 @@ class Country(models.Model):
 
 
 class Director(models.Model):
+    """Режиссёр фильма"""
     director_name = models.CharField(max_length=64)
     director_bio = models.TextField()
     director_age = models.PositiveSmallIntegerField(validators=[MinValueValidator(16), MaxValueValidator(95)])
@@ -38,6 +43,7 @@ class Director(models.Model):
 
 
 class Actor(models.Model):
+    """Актёр фильма"""
     actor_name = models.CharField(max_length=64)
     actor_bio = models.TextField()
     actor_age = models.PositiveSmallIntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)])
@@ -48,6 +54,7 @@ class Actor(models.Model):
 
 
 class Genre(models.Model):
+    """Жанр фильма"""
     genre_name = models.CharField(max_length=64, unique=True)
 
     def __str__(self):
@@ -55,6 +62,7 @@ class Genre(models.Model):
 
 
 class Movie(models.Model):
+    """Фильм: название, год, страна, режиссёр, актёры, жанр, видео, рейтинг"""
     movie_name = models.CharField(max_length=64)
     year = models.DateField()
     country = models.ManyToManyField(Country, related_name='countries')
@@ -62,51 +70,56 @@ class Movie(models.Model):
     actor = models.ManyToManyField(Actor)
     genre = models.ManyToManyField(Genre)
     TYPES_CHOICES = (
-    ('144p', '144p'),
-    ('270p', '270p'),
-    ('360p', '360p'),
-    ('480p', '480p'),
-    ('720p', '720p'),
-    ('1080p', '1080p'),
+        ('144p', '144p'),
+        ('270p', '270p'),
+        ('360p', '360p'),
+        ('480p', '480p'),
+        ('720p', '720p'),
+        ('1080p', '1080p'),
     )
     types = models.CharField(choices=TYPES_CHOICES, default='360p')
-    movie_time = models.PositiveSmallIntegerField()
+    movie_time = models.PositiveSmallIntegerField()  # длительность в минутах
     descriptions = models.TextField()
     movie_trailer = models.URLField()
     movie_image = models.ImageField(upload_to='movie_image/')
     status_movie = models.CharField(choices=STATUS_CHOICES, default='simple')
 
     def __str__(self):
-        return f'{self.movie_name}'
+        return self.movie_name
 
     def get_avg_rating(self):
+        """Средний рейтинг фильма"""
         score = self.ratings.all()
         if score.exists():
             return round(sum([i.stars for i in score]) / score.count(), 2)
         return 0
 
     def get_count_people(self):
+        """Количество оценок"""
         return self.ratings.count()
 
 
 class MovieLanguage(models.Model):
+    """Язык и видеофайл фильма"""
     language = models.CharField(max_length=32)
     video = models.FileField(upload_to='movie_videos/', null=True, blank=True)
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='languages')
 
     def __str__(self):
-        return f'{self.language}-{self.movie}'
+        return f'{self.language} - {self.movie.movie_name}'
 
 
 class Moments(models.Model):
+    """Кадры/скриншоты из фильма"""
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='moments')
     movie_moment = models.ImageField(upload_to='movie_moment/', null=True, blank=True)
 
     def __str__(self):
-        return f'{self.movie}'
+        return f'{self.movie.movie_name}'
 
 
 class Rating(models.Model):
+    """Отзыв и оценка фильма пользователем. Поддержка вложенных комментариев через parent"""
     user = models.ForeignKey(Profile, on_delete=models.CASCADE)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='ratings')
@@ -115,28 +128,31 @@ class Rating(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'{self.user}-{self.movie}'
+        return f'{self.user} - {self.movie.movie_name}'
 
 
 class Favorite(models.Model):
+    """Избранное пользователя (список)"""
     user = models.OneToOneField(Profile, on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.user
+        return str(self.user)
 
 
-class  FavoriteMovie(models.Model):
+class FavoriteMovie(models.Model):
+    """Фильм в избранном"""
     favorite = models.ForeignKey(Favorite, on_delete=models.CASCADE)
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f'{self.favorite}-{self.movie}'
+        return f'{self.favorite} - {self.movie.movie_name}'
 
 
 class History(models.Model):
+    """История просмотров фильма"""
     user = models.OneToOneField(Profile, on_delete=models.CASCADE)
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
     viewed_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.user
+        return f'{self.user} - {self.movie.movie_name}'
